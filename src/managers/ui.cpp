@@ -41,11 +41,11 @@ void ui_main_screen_full_draw(UIState* state, BitDepth depth, Screen* screen, FA
     }
 }
 
-void ui_show_message(UiMode mode, FASTEPD* epaper) {
+void ui_show_message(UIState* state, FASTEPD* epaper) {
     const uint8_t* icon = alert_circle;
     const char* const* text_lines = TEXT_GENERIC_ERROR;
 
-    switch (mode) {
+    switch (state->mode) {
     case UiMode::Boot:
         icon = home_assistant;
         text_lines = TEXT_BOOT;
@@ -62,9 +62,18 @@ void ui_show_message(UiMode mode, FASTEPD* epaper) {
         icon = lock_alert_outline;
         text_lines = TEXT_HASS_INVALID_KEY;
         break;
+    default:
+        break;
     }
 
     drawCenteredIconWithText(epaper, icon, text_lines, 30, 100);
+
+    // Show IP address at the bottom if we have one
+    if (state->wifi_ip[0] != '\0' && strcmp(state->wifi_ip, "0.0.0.0") != 0) {
+        char ip_buf[32];
+        snprintf(ip_buf, sizeof(ip_buf), "IP: %s", state->wifi_ip);
+        drawTextAt(epaper, ip_buf, 30, (uint16_t)DISPLAY_HEIGHT - 40);
+    }
 }
 
 void ui_task(void* arg) {
@@ -84,9 +93,17 @@ void ui_task(void* arg) {
         if (ulTaskNotifyTake(pdTRUE, notify_timeout)) {
             store_update_ui_state(ctx->store, ctx->screen, &current_state);
 
-            // Handle screen change
+            // Populate IP address from shared state
+            xSemaphoreTake(ctx->shared_state->mutex, portMAX_DELAY);
+            strncpy(current_state.wifi_ip, ctx->shared_state->state.wifi_ip, 15);
+            current_state.wifi_ip[15] = '\0';
+            xSemaphoreGive(ctx->shared_state->mutex);
+
+            // Handle screen change or state update in message modes
             size_t widget_idx;
-            if (current_state.mode != displayed_state.mode) {
+            bool ip_changed = strcmp(current_state.wifi_ip, displayed_state.wifi_ip) != 0;
+
+            if (current_state.mode != displayed_state.mode || (current_state.mode != UiMode::MainScreen && ip_changed)) {
                 ctx->epaper->setMode(BB_MODE_4BPP);
                 ctx->epaper->fillScreen(0xf);
 
@@ -98,10 +115,10 @@ void ui_task(void* arg) {
                     // Preload the 1BPP version for fast updates
                     ctx->epaper->setMode(BB_MODE_1BPP);
                     ctx->epaper->fillScreen(BBEP_WHITE);
-                    ui_main_screen_full_draw(&displayed_state, BitDepth::BD_1BPP, ctx->screen, ctx->epaper);
+                    ui_main_screen_full_draw(&current_state, BitDepth::BD_1BPP, ctx->screen, ctx->epaper);
                     ctx->epaper->backupPlane();
                 } else {
-                    ui_show_message(current_state.mode, ctx->epaper);
+                    ui_show_message(&current_state, ctx->epaper);
                     ctx->epaper->fullUpdate(CLEAR_SLOW, true);
                 }
                 display_is_dirty = false;

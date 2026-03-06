@@ -17,6 +17,7 @@ enum class UiMode : uint8_t {
 
 struct UIState {
     UiMode mode = UiMode::Blank;
+    char wifi_ip[16] = "0.0.0.0";
     uint8_t widget_values[MAX_WIDGETS_PER_SCREEN] = {};
 };
 
