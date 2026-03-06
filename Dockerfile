@@ -23,8 +23,9 @@ FROM node:22-bullseye AS web-dev
 
 WORKDIR /app/web
 
-# Install build dependencies for native modules
-RUN apt-get update && apt-get install -y libc6 build-essential python3 && rm -rf /var/lib/apt/lists/*
+# Install build dependencies for native modules and platformio
+RUN apt-get update && apt-get install -y libc6 build-essential python3 python3-pip git && rm -rf /var/lib/apt/lists/*
+RUN pip3 install -U platformio
 
 # Optimize for caching
 COPY web/package*.json ./

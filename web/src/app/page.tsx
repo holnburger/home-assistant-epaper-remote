@@ -1,8 +1,47 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Flasher from '@/components/Flasher';
 import OtaFlasher from '@/components/OtaFlasher';
-import Image from 'next/image';
+import ConfigPanel from '@/components/ConfigPanel';
+import DeviceSelector from '@/components/DeviceSelector';
+
+type SetupStage = 'config' | 'usb' | 'ota';
 
 export default function Home() {
+  const [stage, setStage] = useState<SetupStage>('config');
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [refreshDevices, setRefreshDevices] = useState(0);
+
+  useEffect(() => {
+    // Check local storage to see if they've successfully flashed via USB before
+    const hasFlashedUsb = localStorage.getItem('has_flashed_usb');
+    if (hasFlashedUsb) {
+      setStage('ota');
+    }
+    setIsLoaded(true);
+
+    const handleDevicesUpdated = () => setRefreshDevices(prev => prev + 1);
+    window.addEventListener('devices_updated', handleDevicesUpdated);
+    return () => window.removeEventListener('devices_updated', handleDevicesUpdated);
+  }, []);
+
+  const handleBuildComplete = () => {
+    if (stage === 'config') {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      setStage('usb');
+    }
+  };
+
+  const handleFlashComplete = () => {
+    setStage('ota');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Trigger selector reload in case USB flasher saved a new IP
+    setRefreshDevices(prev => prev + 1);
+  };
+
+  if (!isLoaded) return null; // Avoid hydration mismatch
+
   return (
     <main className="min-h-screen py-12 px-6">
       <div className="max-w-4xl mx-auto space-y-12">
@@ -24,36 +63,49 @@ export default function Home() {
           </p>
         </header>
 
-        {/* Flasher Section */}
-        <section>
-          <Flasher />
-        </section>
+        {/* Dynamic Guided Flow */}
+        <div className="flex flex-col gap-8">
 
-        {/* OTA / Resources Section */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <OtaFlasher />
+          <dl className="space-y-8">
+            <ConfigPanel
+              onBuildComplete={handleBuildComplete}
+              isMinimized={stage !== 'config'}
+              onExpand={() => setStage('config')}
+              onCollapse={() => { if (localStorage.getItem('has_flashed_usb')) setStage('ota'); }}
+            />
 
-          <div className="glass p-8 rounded-2xl flex flex-col gap-4">
-            <h3 className="text-xl font-bold text-purple-400 font-sans tracking-tight">Resources</h3>
-            <p className="text-sm text-gray-500">
-              Download the latest compiled firmware binaries for manual flashing or local storage.
-            </p>
-            <div className="flex flex-col gap-2 mt-2">
-              <a
-                href="/build/m5-papers3/firmware.bin"
-                download
-                className="flex items-center justify-between p-3 bg-gray-900/50 border border-gray-800 rounded-lg hover:border-purple-500/30 transition-all group"
-              >
-                <span className="text-sm font-medium text-gray-300">M5PaperS3 Firmware</span>
-                <span className="text-[10px] bg-purple-900/30 text-purple-400 px-2 py-1 rounded">BIN</span>
-              </a>
-              <button className="flex items-center justify-between p-3 bg-gray-900/50 border border-gray-800 rounded-lg opacity-50 cursor-not-allowed">
-                <span className="text-sm font-medium text-gray-500">Lilygo T5 S3 Firmware</span>
-                <span className="text-[10px] bg-gray-800 text-gray-600 px-2 py-1 rounded">BIN</span>
-              </button>
-            </div>
+            <Flasher
+              onFlashComplete={handleFlashComplete}
+              isMinimized={stage !== 'usb'}
+              isActive={stage === 'usb' || stage === 'ota'}
+              onExpand={() => { if (stage !== 'config') setStage('usb'); }}
+              onCollapse={() => { if (localStorage.getItem('has_flashed_usb')) setStage('ota'); }}
+            />
+          </dl>
+
+        </div>
+
+        {/* OTA Section */}
+        <div className={`transition-all duration-700 ${stage === 'ota' ? 'opacity-100 ring-2 ring-purple-500/50 rounded-2xl p-2' : 'opacity-30 grayscale pointer-events-none'}`}>
+          <div className="mb-6 px-2">
+            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+              Step 3: Device Management & OTA
+            </h2>
+            <p className="text-sm text-gray-400 mt-1">Manage multiple remotes and push updates to them over your WiFi network.</p>
           </div>
-        </section>
+
+          <section className="flex flex-col gap-6">
+            <DeviceSelector
+              key={refreshDevices}
+              onDeviceSelected={(ip) => {
+                localStorage.setItem('device_ip', ip);
+                // Dispatch an event so OtaFlasher knows to update its internal IP state
+                window.dispatchEvent(new Event('ip_selected_from_selector'));
+              }}
+            />
+            <OtaFlasher />
+          </section>
+        </div>
 
         <footer className="pt-12 text-center text-gray-600 text-[10px] uppercase tracking-[0.2em]">
           E-Ink HA Remote Dashboard &bull; 2026
