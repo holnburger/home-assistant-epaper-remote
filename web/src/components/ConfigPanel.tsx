@@ -142,7 +142,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ onBuildComplete, isMinimized 
         return (
             <div onClick={onExpand} className="glass p-4 rounded-xl flex items-center justify-between opacity-70 filter grayscale hover:grayscale-0 hover:opacity-100 transition-all cursor-pointer">
                 <div>
-                    <h3 className="text-sm font-bold text-gray-400">Step 1: Configuration</h3>
+                    <h3 className="text-sm font-bold text-gray-400">Step 1.1: Configuration</h3>
                     <p className="text-xs text-gray-500">SSID: {config.wifi_ssid || 'Not configured'}</p>
                 </div>
                 <div className="text-xs text-green-500 bg-green-900/40 px-3 py-1 rounded-full">Completed</div>
@@ -152,7 +152,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ onBuildComplete, isMinimized 
 
     return (
         <div className="glass p-8 rounded-2xl flex flex-col gap-6 ring-2 ring-purple-500/50 shadow-lg shadow-purple-500/10 relative">
-            {onCollapse && (typeof window !== 'undefined' && localStorage.getItem('has_flashed_usb')) && (
+            {onCollapse && (typeof window !== 'undefined' && (localStorage.getItem('has_flashed_usb') || localStorage.getItem('saved_devices')?.includes('dev_'))) && (
                 <button
                     onClick={onCollapse}
                     className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors bg-gray-900/50 p-2 rounded-full border border-gray-800"
@@ -165,8 +165,10 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ onBuildComplete, isMinimized 
             )}
             <div className="flex justify-between items-center pr-12">
                 <div>
-                    <h3 className="text-xl font-bold text-purple-400 font-sans tracking-tight">Step 1: Configuration</h3>
-                    <p className="text-xs text-purple-300/60 mt-1">Configure and build the firmware for your device.</p>
+                    <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+                        Step 1.1: Configuration
+                    </h2>
+                    <p className="text-sm text-gray-400 mt-1">Provide your WiFi and Home Assistant details for the initial build.</p>
                 </div>
                 <div className={`px-3 py-1 rounded-full text-xs font-medium ${status === 'Idle' ? 'bg-gray-800 text-gray-400' :
                     status.includes('Error') || status.includes('Failed') ? 'bg-red-900/40 text-red-400' :

@@ -58,10 +58,11 @@ const Flasher: React.FC<FlasherProps> = ({ onFlashComplete, isMinimized = false,
                 romBaudrate: 115200,
             });
 
-            // Fetch all 3 binaries
+            // Fetch all 3 binaries and append timestamp to prevent Next.js caching
             const fetchBinary = async (name: string) => {
-                const url = `/build/${device}/${name}.bin`;
-                const res = await fetch(url);
+                const timestamp = Date.now();
+                const url = `/build/${device}/${name}.bin?t=${timestamp}`;
+                const res = await fetch(url, { cache: 'no-store' });
                 if (!res.ok) throw new Error(`Failed to fetch ${name}: ${res.statusText} (${res.status})`);
                 const buffer = await res.arrayBuffer();
                 return esploader.ui8ToBstr(new Uint8Array(buffer));
@@ -70,6 +71,7 @@ const Flasher: React.FC<FlasherProps> = ({ onFlashComplete, isMinimized = false,
             setStatus('Downloading binaries...');
             const bootloader = await fetchBinary('bootloader');
             const partitions = await fetchBinary('partitions');
+            const bootApp0 = await fetchBinary('boot_app0');
             const firmware = await fetchBinary('firmware');
 
             setStatus('Connecting to ESP32...');
@@ -80,6 +82,7 @@ const Flasher: React.FC<FlasherProps> = ({ onFlashComplete, isMinimized = false,
             const fileContents = [
                 { data: bootloader, address: 0x0000 },
                 { data: partitions, address: 0x8000 },
+                { data: bootApp0, address: 0xe000 },
                 { data: firmware, address: 0x10000 }
             ];
 
@@ -215,7 +218,7 @@ const Flasher: React.FC<FlasherProps> = ({ onFlashComplete, isMinimized = false,
 
     return (
         <div className={`glass p-8 rounded-2xl w-full max-w-2xl mx-auto flex flex-col gap-6 relative overflow-hidden transition-all duration-500 ${isActive ? 'ring-2 ring-purple-500/50 shadow-lg shadow-purple-500/10' : 'opacity-40 grayscale pointer-events-none'}`}>
-            {onCollapse && (typeof window !== 'undefined' && localStorage.getItem('has_flashed_usb')) && (
+            {onCollapse && (typeof window !== 'undefined' && (localStorage.getItem('has_flashed_usb') || localStorage.getItem('saved_devices')?.includes('dev_'))) && (
                 <button
                     onClick={onCollapse}
                     className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors bg-gray-900/50 p-2 rounded-full border border-gray-800 z-30"
@@ -237,23 +240,20 @@ const Flasher: React.FC<FlasherProps> = ({ onFlashComplete, isMinimized = false,
                     <p className="text-gray-400 text-sm max-w-sm">
                         WebSerial is only available in <strong>Chrome</strong> or <strong>Edge</strong> over a secure connection (<strong>localhost</strong> or HTTPS).
                     </p>
-                    <div className="bg-blue-500/10 border border-blue-500/30 p-4 rounded-xl text-left">
-                        <p className="text-blue-400 text-xs font-bold uppercase tracking-wider mb-2">How to fix:</p>
-                        <ul className="text-xs text-blue-300 space-y-1 list-disc list-inside">
-                            <li>Use <strong>Chrome</strong> or <strong>Edge</strong> browser</li>
-                            <li>Access this tool via <strong>http://localhost:3000</strong></li>
-                            <li>Avoid using local IP addresses (like 192.168.x.x)</li>
-                        </ul>
-                    </div>
                 </div>
             )}
 
             <div className="flex justify-between items-center">
                 <div>
                     <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
-                        Step 2: USB Flasher
+                        Step 1.2: USB Flasher
                     </h2>
-                    <p className="text-xs text-purple-300/60 mt-1">Connect your device to your computer to flash the initial firmware.</p>
+                    <p className="text-xs text-purple-300/60 mt-1 flex items-center gap-1.5">
+                        <svg className="w-3.3 h-3.3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Connect via USB (Chrome/Edge Required)
+                    </p>
                 </div>
                 <div className={`px-3 py-1 rounded-full text-xs font-medium ${status === 'Idle' ? 'bg-gray-800 text-gray-400' :
                     status.includes('Failed') ? 'bg-red-900/40 text-red-400' :
