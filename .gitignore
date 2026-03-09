@@ -1,10 +1,11 @@
 .pio
 .vscode
 sdkconfig.*
-src/config_remote.cpp
 src/assets/icons.h
 firmware.bin
 web/public/build/
 web/.next/
 web/node_modules/
 web/.env.local
+config.json
+src/secrets.h
