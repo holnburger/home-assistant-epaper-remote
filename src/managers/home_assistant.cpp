@@ -90,9 +90,9 @@ void hass_parse_entity_update(home_assistant_context_t* hass, uint8_t widget_idx
     // Parse state
     cJSON* state = cJSON_GetObjectItem(item, "s");
     if (cJSON_IsString(state)) {
-        if (strcmp(state->valuestring, "on") == 0) {
+        if (strcmp(state->valuestring, "on") == 0 || strcmp(state->valuestring, "open") == 0) {
             hass->entity_states[widget_idx] = true;
-        } else if (strcmp(state->valuestring, "off") == 0) {
+        } else if (strcmp(state->valuestring, "off") == 0 || strcmp(state->valuestring, "closed") == 0) {
             hass->entity_states[widget_idx] = false;
         }
     }
@@ -100,22 +100,36 @@ void hass_parse_entity_update(home_assistant_context_t* hass, uint8_t widget_idx
     // Parse attributes
     cJSON* attributes = cJSON_GetObjectItem(item, "a");
     if (cJSON_IsObject(attributes)) {
-        // Extract percentage if available
+        // Extract percentage if available (Fan)
         cJSON* percentage = cJSON_GetObjectItem(attributes, "percentage");
         if (cJSON_IsNumber(percentage)) {
             hass->entity_values[widget_idx] = percentage->valueint;
+        } else if (cJSON_IsString(percentage)) {
+            hass->entity_values[widget_idx] = atoi(percentage->valuestring);
         }
 
-        // Extract brightness
+        // Extract current_position (Cover)
+        cJSON* current_position = cJSON_GetObjectItem(attributes, "current_position");
+        if (cJSON_IsNumber(current_position)) {
+            hass->entity_values[widget_idx] = current_position->valueint;
+        } else if (cJSON_IsString(current_position)) {
+            hass->entity_values[widget_idx] = atoi(current_position->valuestring);
+        }
+
+        // Extract brightness (Light)
         cJSON* brightness = cJSON_GetObjectItem(attributes, "brightness");
         if (cJSON_IsNumber(brightness)) {
             hass->entity_values[widget_idx] = brightness->valueint * 100 / 254;
+        } else if (cJSON_IsString(brightness)) {
+            hass->entity_values[widget_idx] = atoi(brightness->valuestring) * 100 / 254;
         }
 
         // Extract off_brightness
         cJSON* off_brightness = cJSON_GetObjectItem(attributes, "off_brightness");
         if (cJSON_IsNumber(off_brightness)) {
             hass->entity_values[widget_idx] = off_brightness->valueint * 100 / 254;
+        } else if (cJSON_IsString(off_brightness)) {
+            hass->entity_values[widget_idx] = atoi(off_brightness->valuestring) * 100 / 254;
         }
     }
 
@@ -297,6 +311,13 @@ void hass_send_command(home_assistant_context_t* hass, Command* cmd) {
         cJSON_AddItemToObject(root, "service_data", service_data = cJSON_CreateObject());
         cJSON_AddStringToObject(service_data, "entity_id", cmd->entity_id);
         cJSON_AddNumberToObject(service_data, "brightness_pct", cmd->value);
+        break;
+    case CommandType::SetCoverPositionPercentage:
+        cJSON_AddStringToObject(root, "domain", "cover");
+        cJSON_AddStringToObject(root, "service", "set_cover_position");
+        cJSON_AddItemToObject(root, "service_data", service_data = cJSON_CreateObject());
+        cJSON_AddStringToObject(service_data, "entity_id", cmd->entity_id);
+        cJSON_AddNumberToObject(service_data, "position", cmd->value);
         break;
     case CommandType::SetFanSpeedPercentage:
         cJSON_AddStringToObject(root, "domain", "fan");

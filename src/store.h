@@ -10,6 +10,7 @@
 
 enum class CommandType : uint8_t {
     SetLightBrightnessPercentage,
+    SetCoverPositionPercentage,
     SetFanSpeedPercentage,
     SwitchOnOff,
     AutomationOnOff,

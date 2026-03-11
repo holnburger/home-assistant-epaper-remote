@@ -66,7 +66,10 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ onBuildComplete, isMinimized 
             const res = await fetch('/api/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(config)
+                body: JSON.stringify({
+                    wifi_ssid: config.wifi_ssid,
+                    home_assistant_url: config.home_assistant_url
+                })
             });
             const data = await res.json();
             if (res.ok) {

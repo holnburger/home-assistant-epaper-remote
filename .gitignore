@@ -9,3 +9,6 @@ web/node_modules/
 web/.env.local
 config.json
 src/secrets.h
+src/config_widgets.h
+icons-buttons/
+.DS_Store

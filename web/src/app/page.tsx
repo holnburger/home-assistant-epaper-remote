@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Flasher from '@/components/Flasher';
-import OtaFlasher from '@/components/OtaFlasher';
 import ConfigPanel from '@/components/ConfigPanel';
 import DeviceSelector from '@/components/DeviceSelector';
+import DisplayLayoutSection from '@/components/DisplayLayoutSection';
 
 type SetupStage = 'config' | 'usb' | 'ota';
 
@@ -41,12 +41,6 @@ export default function Home() {
     }
   };
 
-  const handleFlashComplete = () => {
-    setStage('ota');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    // Trigger selector reload in case USB flasher saved a new IP
-    setRefreshDevices(prev => prev + 1);
-  };
 
   if (!isLoaded) return null; // Avoid hydration mismatch
 
@@ -54,20 +48,12 @@ export default function Home() {
     <main className="min-h-screen py-12 px-6">
       <div className="max-w-6xl mx-auto space-y-12">
         {/* Header section */}
-        <header className="flex flex-col items-center text-center space-y-6">
-          <div className="w-24 h-24 relative animate-pulse-slow">
-            <div className="absolute inset-0 bg-blue-500 blur-3xl opacity-30 rounded-full"></div>
-            <div className="glass rounded-3xl flex items-center justify-center w-full h-full relative z-10 border border-white/10 shadow-2xl">
-              <span className="text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-br from-blue-400 to-purple-500">
-                HA
-              </span>
-            </div>
-          </div>
+        <header className="flex flex-col space-y-6">
           <div className="space-y-2">
             <h1 className="text-6xl font-black tracking-tighter">
               E-Ink <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600">Hub</span>
             </h1>
-            <p className="text-gray-400 max-w-lg mx-auto text-lg">
+            <p className="text-gray-400 max-w-lg text-lg">
               The professional dashboard for your Home Assistant remotes. Setup new devices via USB or manage existing ones wirelessly.
             </p>
           </div>
@@ -104,7 +90,6 @@ export default function Home() {
               />
 
               <Flasher
-                onFlashComplete={handleFlashComplete}
                 isMinimized={stage === 'ota'}
                 isActive={stage === 'usb' || stage === 'ota' || stage === 'config'}
                 onExpand={() => { if (stage !== 'config') setStage('usb'); }}
@@ -126,13 +111,9 @@ export default function Home() {
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">Update & manage paired devices</p>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-900/30 border border-purple-500/20">
-                <div className="w-2 h-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.6)]"></div>
-                <span className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">All Browsers</span>
-              </div>
             </div>
 
-            <div className={`transition-all duration-700 flex flex-col gap-6`}>
+            <div className="transition-all duration-700 flex flex-col gap-6">
               <DeviceSelector
                 key={refreshDevices}
                 onDeviceSelected={(ip) => {
@@ -140,13 +121,13 @@ export default function Home() {
                   window.dispatchEvent(new Event('ip_selected_from_selector'));
                 }}
               />
-              <div className="glass p-8 rounded-2xl flex flex-col gap-4 border border-purple-500/10 shadow-lg shadow-purple-500/5">
-                <OtaFlasher />
-              </div>
             </div>
           </section>
 
         </div>
+
+        {/* Path C: Display Layout Manager */}
+        <DisplayLayoutSection />
 
         <footer className="pt-24 text-center">
 
